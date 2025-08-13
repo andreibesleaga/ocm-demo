@@ -122,7 +122,7 @@ app.post('/api/mcp', async (req, res) => {
   try {
     const { command } = req.body;
     
-    if (command.toLowerCase().includes('charging') || command.toLowerCase().includes('stations') || command.toLowerCase().includes('poi')) {
+    if (command.toLowerCase().includes('charging') || command.toLowerCase().includes('stations') || command.toLowerCase().includes('poi') || command.toLowerCase().includes('coordinates')) {
       // Extract location from various formats
       let location = '';
       const locationMatch = command.match(/(?:in|near|at|for)\s+([^\n]+)/i);
@@ -276,200 +276,18 @@ app.post('/api/mcp', async (req, res) => {
   }
 });
 
-// Create public directory and files
-import { mkdir, writeFile } from 'fs/promises';
-import { existsSync } from 'fs';
 
-async function createPublicFiles() {
-  if (!existsSync('public')) {
-    await mkdir('public');
-  }
-  
-  const indexHtml = `<!DOCTYPE html>
-<html>
-<head>
-    <title>OCM MCP Demo</title>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <style>
-        body { margin: 0; font-family: Arial, sans-serif; }
-        .container { display: flex; height: 100vh; }
-        #map { flex: 1; }
-        .sidebar { width: 300px; padding: 20px; background: #f5f5f5; overflow-y: auto; }
-        .input-group { margin-bottom: 15px; }
-        textarea { width: 100%; height: 100px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
-        button { width: 100%; padding: 10px; background: #007cba; color: white; border: none; border-radius: 4px; cursor: pointer; margin-bottom: 5px; }
-        button:hover { background: #005a87; }
-        .result { margin-top: 15px; padding: 10px; background: white; border-radius: 4px; font-size: 12px; max-height: 300px; overflow-y: auto; }
-        .error { background: #ffe6e6; color: #d00; }
-        .success { background: #e6ffe6; color: #060; }
-        .info { background: #e6f3ff; color: #0066cc; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div id="map"></div>
-        <div class="sidebar">
-            <h3>OCM MCP Demo</h3>
-            <p>Real MCP protocol with <strong>ocm-mcp</strong> server</p>
-            <div class="input-group">
-                <textarea id="command" placeholder="Try: charging GB, stations US, Find charging stations in London, GB, or tools"></textarea>
-                <button onclick="sendCommand()">Send MCP Command</button>
-                <button onclick="listTools()">List MCP Tools</button>
-            </div>
-            <div id="result" class="result info">Using real MCP protocol with ocm-mcp server. Enter a command to get started.</div>
-        </div>
-    </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>
-        const map = L.map('map').setView([51.505, -0.09], 10);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
-
-        let markers = [];
-
-        async function sendCommand() {
-            const command = document.getElementById('command').value;
-            const resultDiv = document.getElementById('result');
-            
-            if (!command.trim()) return;
-            
-            resultDiv.innerHTML = 'Processing MCP command via protocol...';
-            resultDiv.className = 'result';
-            
-            try {
-                const response = await fetch('/api/mcp', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ command })
-                });
-                
-                const result = await response.json();
-                
-                if (result.error) {
-                    resultDiv.innerHTML = result.error;
-                    resultDiv.className = 'result error';
-                } else if (result.tools) {
-                    displayTools(result.tools);
-                } else {
-                    displayResults(result);
-                }
-            } catch (error) {
-                resultDiv.innerHTML = 'Network error: ' + error.message;
-                resultDiv.className = 'result error';
-            }
-        }
-
-        async function listTools() {
-            const resultDiv = document.getElementById('result');
-            resultDiv.innerHTML = 'Listing MCP tools...';
-            
-            try {
-                const response = await fetch('/api/mcp', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ command: 'list tools' })
-                });
-                
-                const result = await response.json();
-                displayTools(result.tools || []);
-            } catch (error) {
-                resultDiv.innerHTML = 'Error listing tools: ' + error.message;
-                resultDiv.className = 'result error';
-            }
-        }
-
-        function displayTools(tools) {
-            const resultDiv = document.getElementById('result');
-            if (tools.length > 0) {
-                resultDiv.innerHTML = '<strong>Available MCP Tools:</strong><br>' + 
-                    tools.map(tool => '• ' + tool.name + ': ' + tool.description).join('<br>');
-                resultDiv.className = 'result info';
-            } else {
-                resultDiv.innerHTML = 'No MCP tools available';
-                resultDiv.className = 'result';
-            }
-        }
-
-        function displayResults(result) {
-            const resultDiv = document.getElementById('result');
-            
-            // Clear existing markers
-            markers.forEach(marker => map.removeLayer(marker));
-            markers = [];
-            
-            if (Array.isArray(result) && result.length > 0) {
-                let validMarkers = 0;
-                
-                result.forEach(poi => {
-                    if (poi.AddressInfo && poi.AddressInfo.Latitude && poi.AddressInfo.Longitude) {
-                        const title = poi.AddressInfo.Title || 'Charging Station';
-                        const town = poi.AddressInfo.Town || '';
-                        const country = poi.AddressInfo.Country ? poi.AddressInfo.Country.Title || poi.AddressInfo.Country : '';
-                        const power = poi.Connections && poi.Connections[0] && poi.Connections[0].PowerKW 
-                            ? poi.Connections[0].PowerKW + 'kW' 
-                            : 'Power unknown';
-                        const status = poi.StatusType ? poi.StatusType.Title || 'Unknown' : 'Unknown';
-                        
-                        const popupContent = '<b>' + title + '</b><br>' + 
-                            (town ? town + '<br>' : '') +
-                            (country ? country + '<br>' : '') +
-                            'Power: ' + power + '<br>' +
-                            'Status: ' + status;
-                        
-                        const marker = L.marker([poi.AddressInfo.Latitude, poi.AddressInfo.Longitude])
-                            .addTo(map)
-                            .bindPopup(popupContent);
-                        markers.push(marker);
-                        validMarkers++;
-                    }
-                });
-                
-                resultDiv.innerHTML = '<strong>MCP Protocol Result: Found ' + result.length + ' charging stations</strong><br>' +
-                    'Added ' + validMarkers + ' markers to map';
-                resultDiv.className = 'result success';
-                
-                if (markers.length > 0) {
-                    const group = new L.featureGroup(markers);
-                    map.fitBounds(group.getBounds().pad(0.1));
-                }
-            } else if (Array.isArray(result)) {
-                resultDiv.innerHTML = 'MCP Result: No charging stations found';
-                resultDiv.className = 'result';
-            } else {
-                console.log('Raw MCP response:', result);
-                resultDiv.innerHTML = 'MCP Response: ' + JSON.stringify(result, null, 2);
-                resultDiv.className = 'result';
-            }
-        }
-
-        document.getElementById('command').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter' && e.ctrlKey) {
-                sendCommand();
-            }
-        });
-    </script>
-</body>
-</html>`;
-
-  await writeFile('public/index.html', indexHtml);
+// Test MCP client on startup
+try {
+  const tools = await mcpClient.listTools();
+  console.log(`MCP client ready with ${tools.length} tools:`, tools.map(t => t.name));
+} catch (error) {
+  console.error('MCP client test failed:', error.message);
 }
 
-createPublicFiles().then(async () => {
-  // Test MCP client on startup
-  try {
-    const tools = await mcpClient.listTools();
-    console.log(`MCP client ready with ${tools.length} tools:`, tools.map(t => t.name));
-  } catch (error) {
-    console.error('MCP client test failed:', error.message);
-  }
-  
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`Using real MCP protocol with ocm-mcp server`);
-    console.log(`Open http://localhost:${PORT} to view the demo`);
-  });
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Using real MCP protocol with ocm-mcp server`);
+  console.log(`Open http://localhost:${PORT} to view the demo`);
 });

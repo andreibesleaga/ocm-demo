@@ -27,8 +27,9 @@
             <h3>OCM MCP Demo</h3>
             <p>Real MCP protocol with <strong>ocm-mcp</strong> server</p>
             <div class="input-group">
-                <textarea id="command" placeholder="Try: charging GB, stations US, Find charging stations in London, GB, or tools"></textarea>
+                <textarea id="command" placeholder="Try: charging GB, stations US, Find charging stations in London, GB, click map to select area, or tools"></textarea>
                 <button onclick="sendCommand()">Send MCP Command</button>
+                <button onclick="searchHere()">Search Here</button>
                 <button onclick="listTools()">List MCP Tools</button>
             </div>
             <div id="result" class="result info">Using real MCP protocol with ocm-mcp server. Enter a command to get started.</div>
@@ -43,6 +44,33 @@
         }).addTo(map);
 
         let markers = [];
+        let selectedMarker = null;
+
+        // Add click handler for map selection
+        map.on('click', function(e) {
+            const lat = e.latlng.lat.toFixed(4);
+            const lng = e.latlng.lng.toFixed(4);
+            
+            // Remove previous selection marker
+            if (selectedMarker) {
+                map.removeLayer(selectedMarker);
+            }
+            
+            // Add new selection marker (red)
+            selectedMarker = L.marker([lat, lng], {
+                icon: L.icon({
+                    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+                    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                    iconSize: [25, 41],
+                    iconAnchor: [12, 41],
+                    popupAnchor: [1, -34],
+                    shadowSize: [41, 41]
+                })
+            }).addTo(map).bindPopup(`Selected: ${lat}, ${lng}<br>Click "Search Here" to find stations`);
+            
+            // Update command input
+            document.getElementById('command').value = `Search coordinates ${lat}, ${lng}`;
+        });
 
         async function sendCommand() {
             const command = document.getElementById('command').value;
@@ -156,6 +184,15 @@
                 console.log('Raw MCP response:', result);
                 resultDiv.innerHTML = 'MCP Response: ' + JSON.stringify(result, null, 2);
                 resultDiv.className = 'result';
+            }
+        }
+
+        function searchHere() {
+            if (selectedMarker) {
+                sendCommand();
+            } else {
+                document.getElementById('result').innerHTML = 'Click on the map first to select a location';
+                document.getElementById('result').className = 'result error';
             }
         }
 
