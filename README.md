@@ -30,13 +30,9 @@ npm start
 ## Usage
 
 Enter commands like:
-- "Find charging stations in London"
-- "Find charging stations in Paris"
+- "Find charging stations in US" or "charging US"
+- "Find charging stations in London, GB" or "stations near London, GB"
+- "charging stations Paris, FR" or "stations Paris"
+- "List tools" or "tools" (show available MCP tools)
 
-## Deploy to Render
-
-1. Connect your GitHub repository to Render
-2. Set environment variable `OCM_API_KEY` (optional)
-3. Deploy as a Web Service
-
-The app will automatically create the frontend files and start the server.
+The app accepts flexible command formats - just mention "charging", "stations", or "poi" with a location.
