@@ -2,6 +2,8 @@
 
 A simple web application demonstrating the OCM (Open Charge Map) MCP (Model Context Protocol) SDK.
 
+Live: https://ocm-demo.onrender.com/
+
 ## Features
 
 - Interactive map showing EV charging stations
