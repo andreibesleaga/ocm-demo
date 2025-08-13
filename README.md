@@ -1,8 +1,9 @@
 # OCM MCP Demo
 
-A simple web app demonstrating the OCM (Open Charge Map) MCP (Model Context Protocol) SDK,using the npm package of https://github.com/andreibesleaga/ocm-sdk mcp-server.
+A simple web app demonstrating the OCM (Open Charge Map) MCP (Model Context Protocol) SDK,
+using the npm package of https://github.com/andreibesleaga/ocm-sdk mcp-server.
 
-Live: https://ocm-demo.onrender.com/
+Live demo: https://ocm-demo.onrender.com/
 
 ## Features
 
@@ -10,7 +11,7 @@ Live: https://ocm-demo.onrender.com/
 - AI-style command interface using MCP
 - Real-time data from Open Charge Map API
 - Click-to-select map coordinates
-- Modular architecture with separate MCP server
+  
 
 ## Project Structure
 
