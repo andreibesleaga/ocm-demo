@@ -1,0 +1,16 @@
+{
+  "name": "ocm-mcp-demo",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "build": "echo 'No build needed'"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "ocm-mcp": "^0.3.1-beta"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
