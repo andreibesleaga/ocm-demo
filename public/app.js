@@ -156,6 +156,52 @@ function searchHere() {
     }
 }
 
+function showInstallGuide() {
+    const resultDiv = document.getElementById('result');
+    resultDiv.innerHTML = `
+        <strong>OCM MCP Server Installation Guide</strong><br><br>
+        
+        <strong>📦 Installation:</strong><br>
+        <code>npm install -g ocm-mcp</code><br><br>
+        
+        <strong>🔧 Claude Desktop Setup:</strong><br>
+        Add to <code>claude_desktop_config.json</code>:<br>
+        <pre>{
+  "mcpServers": {
+    "ocm": {
+      "command": "npx",
+      "args": ["ocm-mcp"],
+      "env": {
+        "OCM_API_KEY": "your_api_key_here"
+      }
+    }
+  }
+}</pre><br>
+        
+        <strong>💻 VSCode/Cursor Setup:</strong><br>
+        Install MCP extension and add server config<br><br>
+        
+        <strong>🚀 Example Prompts:</strong><br>
+        • "Find EV charging stations in London"<br>
+        • "Show me fast charging stations within 50km of Paris"<br>
+        • "List charging stations in California with Tesla connectors"<br>
+        • "What charging options are near coordinates 40.7128, -74.0060?"<br><br>
+        
+        <strong>🛠️ Available Tools:</strong><br>
+        • <code>list_poi</code> - Search charging stations by location<br>
+        • <code>retrieve_referencedata</code> - Get countries, operators, etc.<br>
+        • <code>authenticate_profile</code> - User authentication<br>
+        • <code>submit_comment</code> - Submit station comments<br>
+        • <code>create_mediaitem</code> - Upload station photos<br>
+        • <code>retrieve_openapi</code> - Get API documentation<br><br>
+        
+        <strong>🔗 More Info:</strong><br>
+        <a href="https://github.com/andreibesleaga/ocm-sdk" target="_blank">GitHub Repository</a><br>
+        <a href="https://www.npmjs.com/package/ocm-mcp" target="_blank">NPM Package</a>
+    `;
+    resultDiv.className = 'result info';
+}
+
 document.getElementById('command').addEventListener('keypress', function(e) {
     if (e.key === 'Enter' && e.ctrlKey) {
         sendCommand();

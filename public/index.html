@@ -15,6 +15,8 @@
         button { width: 100%; padding: 10px; background: #007cba; color: white; border: none; border-radius: 4px; cursor: pointer; margin-bottom: 5px; }
         button:hover { background: #005a87; }
         .result { margin-top: 15px; padding: 10px; background: white; border-radius: 4px; font-size: 12px; max-height: 300px; overflow-y: auto; }
+        .result pre { background: #f0f0f0; padding: 8px; border-radius: 3px; font-size: 11px; overflow-x: auto; }
+        .result code { background: #f0f0f0; padding: 2px 4px; border-radius: 3px; font-size: 11px; }
         .error { background: #ffe6e6; color: #d00; }
         .success { background: #e6ffe6; color: #060; }
         .info { background: #e6f3ff; color: #0066cc; }
@@ -31,6 +33,7 @@
                 <button onclick="sendCommand()">Send MCP Command</button>
                 <button onclick="searchHere()">Search Here</button>
                 <button onclick="listTools()">List MCP Tools</button>
+                <button onclick="showInstallGuide()">Installation Guide</button>
             </div>
             <div id="result" class="result info">Using real MCP protocol with ocm-mcp server. Enter a command to get started.</div>
         </div>
