@@ -3,7 +3,9 @@
 A simple web app demonstrating the OCM (Open Charge Map) MCP (Model Context Protocol) SDK,
 using the npm package of https://github.com/andreibesleaga/ocm-sdk mcp-server.
 
-Live demo: https://ocm-demo.onrender.com/
+Live demo: https://ocm-demo.up.railway.app/
+
+Live MCP server: https://ocm-mcp.stlmcp.com
 
 ## Features
 
