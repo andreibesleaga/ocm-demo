@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "express": "^4.22.1",
+    "express": "^4.22.2",
     "express-rate-limit": "^8.5.2",
     "helmet": "^8.2.0",
     "ocm-mcp": "^0.3.1-beta"
