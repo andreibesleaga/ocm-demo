@@ -2,8 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
 
 // Mock the MCP client so tests never spawn `npx ocm-mcp`.
-const listTools = vi.fn();
-const callTool = vi.fn();
+const { listTools, callTool } = vi.hoisted(() => ({
+  listTools: vi.fn(),
+  callTool: vi.fn(),
+}));
 vi.mock('../mcp-server.js', () => ({
   default: class {
     listTools = listTools;

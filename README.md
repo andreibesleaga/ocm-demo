@@ -175,7 +175,7 @@ empty-command guard, and the sanitized-error path (MCP layer mocked).
 ## Manual review checklist
 
 - **config:** `.env` (`OCM_API_KEY` optional), env vars above
-- **run:** `npm install` then `npm start`, open http://localhost:3000
-- **examples:** `node examples/standalone.js`; web commands under [Usage](#usage)
+- **run:** `npm install` then `npm start`, open `http://localhost:3000`
+- **examples:** `node examples/standalone.js`; web commands under "Example queries" above
 - **result:** charging-station list rendered on the map; `List tools` shows 6 MCP tools
 - **path:** server `index.js`, MCP client `mcp-client.js`/`mcp-server.js`, UI `public/`

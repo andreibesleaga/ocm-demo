@@ -34,7 +34,7 @@ class MCPClient {
     } catch (error) {
       await this.#reset();
       console.error('MCP List tools error:', error);
-      return [];
+      throw error;
     }
   }
 
