@@ -1,11 +1,17 @@
 # OCM MCP Demo
 
+> [!WARNING]
+> Proof-of-concept / demo — not intended for production use.
+
 A simple web app demonstrating the OCM (Open Charge Map) MCP (Model Context Protocol) SDK,
 using the npm package of https://github.com/andreibesleaga/ocm-sdk mcp-server.
 
 Live demo: https://ocm-demo.up.railway.app/
 
-Live MCP server: https://ocm-mcp.stlmcp.com
+This app spawns the `ocm-mcp` server locally (`npx ocm-mcp`) over stdio. A separately
+hosted instance of the same MCP server is also available at https://ocm-mcp.stlmcp.com
+for connecting external AI tools — it is an optional external endpoint, not required by
+this demo.
 
 ## Features
 
@@ -19,14 +25,22 @@ Live MCP server: https://ocm-mcp.stlmcp.com
 
 ```
 ocm-demo/
-├── index.js          # Main Express application
-├── mcp-server.js     # MCP client module (can be used standalone)
+├── index.js              # Main Express application
+├── mcp-server.js         # MCP client implementation (legacy name)
+├── mcp-client.js         # Clearer alias re-exporting the MCP client
+├── examples/
+│   └── standalone.js     # Use the MCP client without the web server
+├── docs/
+│   └── mcp-contract.md   # HTTP + MCP request/response contract
 ├── public/
-│   ├── index.html    # Web interface
-│   └── app.js        # Client-side JavaScript
+│   ├── index.html        # Web interface
+│   └── app.js            # Client-side JavaScript
 ├── package.json
 └── README.md
 ```
+
+> Note: `mcp-server.js` actually implements an MCP **client**. `mcp-client.js` is a
+> thin alias with the clearer name; existing imports of `mcp-server.js` keep working.
 
 ## Setup
 
@@ -139,8 +153,29 @@ Once connected to Claude Desktop:
 
 - `OCM_API_KEY` - Optional Open Charge Map API key for higher rate limits
 - `PORT` - Server port (default: 3000)
+- `RATE_LIMIT_WINDOW_MS` - Rate-limit window in ms (default: 60000)
+- `RATE_LIMIT_MAX_REQUESTS` - Max requests per window per IP (default: 120)
+- `NODE_ENV` - Set to `production` to return generic error messages (no internals)
 
 ## API Endpoints
 
-- `POST /api/mcp` - Send MCP commands to the server
+- `POST /api/mcp` - Send MCP commands to the server (see [docs/mcp-contract.md](docs/mcp-contract.md))
+- `GET /healthz` - Liveness probe, returns `{ "ok": true }`
 - `GET /` - Serve the web interface
+
+## Tests
+
+```bash
+npm test
+```
+
+Runs the Vitest suite in [tests/](tests/): `/healthz`, the command parser, the
+empty-command guard, and the sanitized-error path (MCP layer mocked).
+
+## Manual review checklist
+
+- **config:** `.env` (`OCM_API_KEY` optional), env vars above
+- **run:** `npm install` then `npm start`, open http://localhost:3000
+- **examples:** `node examples/standalone.js`; web commands under [Usage](#usage)
+- **result:** charging-station list rendered on the map; `List tools` shows 6 MCP tools
+- **path:** server `index.js`, MCP client `mcp-client.js`/`mcp-server.js`, UI `public/`

@@ -1,11 +1,27 @@
 import express from 'express';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import { fileURLToPath } from 'url';
 import MCPClient from './mcp-server.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.use(helmet({ contentSecurityPolicy: false })); // CSP off: demo loads Leaflet/tiles from CDNs
 app.use(express.json());
+
+// Configurable rate limit; defaults are permissive enough not to affect normal demo use.
+app.use(rateLimit({
+  windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 60_000,
+  max: Number(process.env.RATE_LIMIT_MAX_REQUESTS) || 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+}));
+
 app.use(express.static('public'));
+
+// Liveness probe for Railway / orchestrators.
+app.get('/healthz', (req, res) => res.json({ ok: true }));
 
 const mcpClient = new MCPClient();
 
@@ -25,7 +41,11 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 app.post('/api/mcp', async (req, res) => {
   try {
     const { command } = req.body;
-    
+
+    if (typeof command !== 'string' || command.trim() === '') {
+      return res.status(400).json({ error: 'Missing "command" string in request body.' });
+    }
+
     if (command.toLowerCase().includes('charging') || command.toLowerCase().includes('stations') || command.toLowerCase().includes('poi') || command.toLowerCase().includes('coordinates')) {
       // Extract location from various formats
       let location = '';
@@ -55,7 +75,10 @@ app.post('/api/mcp', async (req, res) => {
         // Use Nominatim API for location lookup
         else {
           try {
-            const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(location)}&format=json&limit=1`);
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(location)}&format=json&limit=1`, {
+              // Nominatim's usage policy requires a descriptive User-Agent.
+              headers: { 'User-Agent': 'ocm-demo/1.0 (https://github.com/andreibesleaga/ocm-demo)' }
+            });
             const data = await response.json();
             
             if (data && data.length > 0) {
@@ -119,20 +142,30 @@ app.post('/api/mcp', async (req, res) => {
     }
   } catch (error) {
     console.error('MCP Error:', error);
-    res.status(500).json({ error: error.message });
+    // Avoid leaking internal messages/stack details to clients in production.
+    const safeError = process.env.NODE_ENV === 'production'
+      ? 'Internal Server Error processing command.'
+      : error.message;
+    res.status(500).json({ error: safeError });
   }
 });
 
-// Test MCP client on startup
-try {
-  const tools = await mcpClient.listTools();
-  console.log(`MCP client ready with ${tools.length} tools:`, tools.map(t => t.name));
-} catch (error) {
-  console.error('MCP client test failed:', error.message);
-}
+export default app;
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Using real MCP protocol with ocm-mcp server`);
-  console.log(`Open http://localhost:${PORT} to view the demo`);
-});
+// Only probe MCP and start listening when run directly (`node index.js`),
+// so the app can be imported in tests without spawning a server.
+const isMain = process.argv[1] === fileURLToPath(import.meta.url);
+if (isMain) {
+  try {
+    const tools = await mcpClient.listTools();
+    console.log(`MCP client ready with ${tools.length} tools:`, tools.map(t => t.name));
+  } catch (error) {
+    console.error('MCP client test failed:', error.message);
+  }
+
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Using real MCP protocol with ocm-mcp server`);
+    console.log(`Open http://localhost:${PORT} to view the demo`);
+  });
+}

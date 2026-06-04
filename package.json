@@ -5,13 +5,21 @@
   "scripts": {
     "start": "node index.js",
     "mcp-server": "npx ocm-mcp",
-    "build": "echo 'No build needed'"
+    "build": "echo 'No build needed'",
+    "test": "vitest run"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "express": "^4.22.1",
+    "express-rate-limit": "^8.5.2",
+    "helmet": "^8.2.0",
     "ocm-mcp": "^0.3.1-beta"
   },
   "engines": {
     "node": ">=18"
+  },
+  "devDependencies": {
+    "supertest": "^7.2.2",
+    "vitest": "^4.1.8"
   }
 }
