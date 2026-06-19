@@ -13,6 +13,8 @@ hosted instance of the same MCP server is also available at https://ocm-mcp.stlm
 for connecting external AI tools — it is an optional external endpoint, not required by
 this demo.
 
+API Reference: https://andreibesleaga.github.io/ocm-api-reference/api.html
+
 ## Features
 
 - Interactive map showing EV charging stations
