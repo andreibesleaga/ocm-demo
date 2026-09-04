@@ -1,149 +1,251 @@
-const map = L.map('map').setView([51.505, -0.09], 10);
+/* OCM MCP Demo — map, MCP commands and result rendering.
+   The API contract is unchanged: every request is POST /api/mcp {command}. */
+
+const map = L.map('map', { zoomControl: false }).setView([51.505, -0.09], 10);
+
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors'
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 19
 }).addTo(map);
+
+L.control.zoom({ position: 'bottomright' }).addTo(map);
 
 let markers = [];
 let selectedMarker = null;
+let pending = false;
 
-// Add click handler for map selection
-map.on('click', function(e) {
-    const lat = e.latlng.lat.toFixed(4);
-    const lng = e.latlng.lng.toFixed(4);
-    
-    // Remove previous selection marker
-    if (selectedMarker) {
-        map.removeLayer(selectedMarker);
+const commandInput = document.getElementById('command');
+const resultEl = document.getElementById('result');
+const resultBody = document.getElementById('result-body');
+const resultMeta = document.getElementById('result-meta');
+const statusEl = resultEl.querySelector('.status');
+const sendButton = document.getElementById('send');
+
+/* ------------------------------------------------------------------ helpers */
+
+function pinIcon(modifier) {
+    const size = modifier === 'pin--selected' ? 24 : 18;
+    return L.divIcon({
+        className: '',
+        html: '<span class="pin ' + (modifier || '') + '"></span>',
+        iconSize: [size, size],
+        iconAnchor: [size / 2, size / 2],
+        popupAnchor: [0, -(size / 2 + 2)]
+    });
+}
+
+function el(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined && text !== null) node.textContent = text;
+    return node;
+}
+
+/** Replace the result panel body, its status pill and its meta line. */
+function setResult(kind, statusText, metaText) {
+    resultEl.className = 'result glass ' + kind;
+    statusEl.textContent = statusText;
+    resultMeta.textContent = metaText || '';
+    resultBody.replaceChildren();
+    return resultBody;
+}
+
+function setBusy(busy, message) {
+    pending = busy;
+    resultEl.setAttribute('aria-busy', busy ? 'true' : 'false');
+    sendButton.disabled = busy;
+    if (busy) {
+        const body = setResult('info', 'Working', '');
+        const line = el('p');
+        line.appendChild(el('span', 'spinner'));
+        line.appendChild(document.createTextNode(message));
+        body.appendChild(line);
     }
-    
-    // Add new selection marker (red)
-    selectedMarker = L.marker([lat, lng], {
-        icon: L.icon({
-            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
-            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-            iconSize: [25, 41],
-            iconAnchor: [12, 41],
-            popupAnchor: [1, -34],
-            shadowSize: [41, 41]
-        })
-    }).addTo(map).bindPopup(`Selected: ${lat}, ${lng}<br>Click "Search Here" to find stations`);
-    
-    // Update command input
-    document.getElementById('command').value = `Search coordinates ${lat}, ${lng}`;
-});
+}
+
+function clearMarkers() {
+    markers.forEach((marker) => map.removeLayer(marker));
+    markers = [];
+}
+
+function stationFields(poi) {
+    const address = poi.AddressInfo || {};
+    const connection = (poi.Connections && poi.Connections[0]) || {};
+    const country = address.Country ? address.Country.Title || address.Country : '';
+    return {
+        title: address.Title || 'Charging station',
+        town: address.Town || '',
+        country: typeof country === 'string' ? country : '',
+        power: connection.PowerKW ? connection.PowerKW + ' kW' : null,
+        status: poi.StatusType ? poi.StatusType.Title || 'Unknown' : 'Unknown',
+        lat: address.Latitude,
+        lon: address.Longitude
+    };
+}
+
+/** Popup built as DOM so values coming from the API are never parsed as HTML. */
+function popupContent(fields) {
+    const wrap = el('div');
+    wrap.appendChild(el('b', null, fields.title));
+    const place = [fields.town, fields.country].filter(Boolean).join(', ');
+    if (place) {
+        wrap.appendChild(document.createElement('br'));
+        wrap.appendChild(document.createTextNode(place));
+    }
+    wrap.appendChild(document.createElement('br'));
+    wrap.appendChild(document.createTextNode('Power: ' + (fields.power || 'unknown')));
+    wrap.appendChild(document.createElement('br'));
+    wrap.appendChild(document.createTextNode('Status: ' + fields.status));
+    return wrap;
+}
+
+/* ------------------------------------------------------------------ actions */
 
 async function sendCommand() {
-    const command = document.getElementById('command').value;
-    const resultDiv = document.getElementById('result');
-    
-    if (!command.trim()) return;
-    
-    resultDiv.innerHTML = 'Processing MCP command via protocol...';
-    resultDiv.className = 'result';
-    
+    const command = commandInput.value;
+    if (!command.trim() || pending) return;
+
+    setBusy(true, 'Processing MCP command via the protocol…');
+
     try {
         const response = await fetch('/api/mcp', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ command })
         });
-        
+
         const result = await response.json();
-        
-        if (result.error) {
-            resultDiv.innerHTML = result.error;
-            resultDiv.className = 'result error';
-        } else if (result.tools) {
+
+        if (result && result.error) {
+            const body = setResult('error', 'Not recognised', '');
+            body.appendChild(el('p', null, result.error));
+            if (Array.isArray(result.availableCommands) && result.availableCommands.length) {
+                body.appendChild(el('p', null, 'Try one of these:'));
+                const list = el('ul', 'tools');
+                result.availableCommands.forEach((entry) => list.appendChild(el('li', null, entry)));
+                body.appendChild(list);
+            }
+        } else if (result && result.tools) {
             displayTools(result.tools);
         } else {
             displayResults(result);
         }
     } catch (error) {
-        resultDiv.innerHTML = 'Network error: ' + error.message;
-        resultDiv.className = 'result error';
+        const body = setResult('error', 'Network error', '');
+        body.appendChild(el('p', null, error.message));
+    } finally {
+        setBusy(false);
     }
 }
 
 async function listTools() {
-    const resultDiv = document.getElementById('result');
-    resultDiv.innerHTML = 'Listing MCP tools...';
-    
+    if (pending) return;
+    setBusy(true, 'Listing MCP tools…');
+
     try {
         const response = await fetch('/api/mcp', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ command: 'list tools' })
         });
-        
+
         const result = await response.json();
         displayTools(result.tools || []);
     } catch (error) {
-        resultDiv.innerHTML = 'Error listing tools: ' + error.message;
-        resultDiv.className = 'result error';
+        const body = setResult('error', 'Error listing tools', '');
+        body.appendChild(el('p', null, error.message));
+    } finally {
+        setBusy(false);
     }
 }
 
 function displayTools(tools) {
-    const resultDiv = document.getElementById('result');
-    if (tools.length > 0) {
-        resultDiv.innerHTML = '<strong>Available MCP Tools:</strong><br>' + 
-            tools.map(tool => '• ' + tool.name + ': ' + tool.description).join('<br>');
-        resultDiv.className = 'result info';
-    } else {
-        resultDiv.innerHTML = 'No MCP tools available';
-        resultDiv.className = 'result';
+    if (!tools.length) {
+        const body = setResult('info', 'No tools', '');
+        body.appendChild(el('p', null, 'The MCP server reported no available tools.'));
+        return;
     }
+
+    const body = setResult('info', 'MCP tools', tools.length + ' available');
+    const list = el('ul', 'tools');
+    tools.forEach((tool) => {
+        const item = el('li');
+        item.appendChild(el('code', null, tool.name));
+        if (tool.description) {
+            item.appendChild(document.createTextNode(' — ' + tool.description));
+        }
+        list.appendChild(item);
+    });
+    body.appendChild(list);
 }
 
 function displayResults(result) {
-    const resultDiv = document.getElementById('result');
-    
-    // Clear existing markers
-    markers.forEach(marker => map.removeLayer(marker));
-    markers = [];
-    
-    if (Array.isArray(result) && result.length > 0) {
-        let validMarkers = 0;
-        
-        result.forEach(poi => {
-            if (poi.AddressInfo && poi.AddressInfo.Latitude && poi.AddressInfo.Longitude) {
-                const title = poi.AddressInfo.Title || 'Charging Station';
-                const town = poi.AddressInfo.Town || '';
-                const country = poi.AddressInfo.Country ? poi.AddressInfo.Country.Title || poi.AddressInfo.Country : '';
-                const power = poi.Connections && poi.Connections[0] && poi.Connections[0].PowerKW 
-                    ? poi.Connections[0].PowerKW + 'kW' 
-                    : 'Power unknown';
-                const status = poi.StatusType ? poi.StatusType.Title || 'Unknown' : 'Unknown';
-                
-                const popupContent = '<b>' + title + '</b><br>' + 
-                    (town ? town + '<br>' : '') +
-                    (country ? country + '<br>' : '') +
-                    'Power: ' + power + '<br>' +
-                    'Status: ' + status;
-                
-                const marker = L.marker([poi.AddressInfo.Latitude, poi.AddressInfo.Longitude])
-                    .addTo(map)
-                    .bindPopup(popupContent);
-                markers.push(marker);
-                validMarkers++;
-            }
+    clearMarkers();
+
+    if (!Array.isArray(result)) {
+        const body = setResult('info', 'MCP response', '');
+        const pre = el('pre', null, JSON.stringify(result, null, 2));
+        body.appendChild(pre);
+        return;
+    }
+
+    if (!result.length) {
+        const body = setResult('info', 'No stations', '0 results');
+        body.appendChild(el('p', null, 'The MCP server returned no charging stations for that area.'));
+        return;
+    }
+
+    const stations = [];
+
+    result.forEach((poi) => {
+        const fields = stationFields(poi);
+        if (typeof fields.lat !== 'number' || typeof fields.lon !== 'number') return;
+
+        const marker = L.marker([fields.lat, fields.lon], { icon: pinIcon(), title: fields.title })
+            .addTo(map)
+            .bindPopup(popupContent(fields));
+        markers.push(marker);
+        stations.push({ fields: fields, marker: marker });
+    });
+
+    const body = setResult(
+        'success',
+        'MCP result',
+        result.length + (result.length === 1 ? ' station' : ' stations') + ' · ' + stations.length + ' on the map'
+    );
+
+    const list = el('ul', 'stations');
+    stations.slice(0, 50).forEach((station) => {
+        const item = document.createElement('li');
+        const button = el('button', 'station');
+        button.type = 'button';
+
+        const text = el('span');
+        text.appendChild(el('span', 'station__name', station.fields.title));
+        const place = [station.fields.town, station.fields.country].filter(Boolean).join(', ');
+        text.appendChild(
+            el('span', 'station__meta', [place, station.fields.status].filter(Boolean).join(' · '))
+        );
+        button.appendChild(text);
+        const power = el('span', 'station__power', station.fields.power || '—');
+        if (!station.fields.power) power.title = 'Power rating not published';
+        button.appendChild(power);
+        button.addEventListener('click', () => {
+            map.setView(station.marker.getLatLng(), Math.max(map.getZoom(), 14));
+            station.marker.openPopup();
         });
-        
-        resultDiv.innerHTML = '<strong>MCP Protocol Result: Found ' + result.length + ' charging stations</strong><br>' +
-            'Added ' + validMarkers + ' markers to map';
-        resultDiv.className = 'result success';
-        
-        if (markers.length > 0) {
-            const group = new L.featureGroup(markers);
-            map.fitBounds(group.getBounds().pad(0.1));
-        }
-    } else if (Array.isArray(result)) {
-        resultDiv.innerHTML = 'MCP Result: No charging stations found';
-        resultDiv.className = 'result';
-    } else {
-        console.log('Raw MCP response:', result);
-        resultDiv.innerHTML = 'MCP Response: ' + JSON.stringify(result, null, 2);
-        resultDiv.className = 'result';
+
+        item.appendChild(button);
+        list.appendChild(item);
+    });
+    body.appendChild(list);
+
+    if (stations.length > 50) {
+        body.appendChild(el('p', 'hint', 'Showing the first 50 of ' + stations.length + ' mapped stations.'));
+    }
+
+    if (markers.length) {
+        map.fitBounds(L.featureGroup(markers).getBounds().pad(0.1));
     }
 }
 
@@ -151,59 +253,133 @@ function searchHere() {
     if (selectedMarker) {
         sendCommand();
     } else {
-        document.getElementById('result').innerHTML = 'Click on the map first to select a location';
-        document.getElementById('result').className = 'result error';
+        const body = setResult('error', 'No point selected', '');
+        body.appendChild(el('p', null, 'Click on the map first to select a location, then press “Search here”.'));
     }
 }
 
 function showInstallGuide() {
-    const resultDiv = document.getElementById('result');
-    resultDiv.innerHTML = `
-        <strong>OCM MCP Server Installation Guide</strong><br><br>
-        
-        <strong>📦 Installation:</strong><br>
-        <code>npm install -g ocm-mcp</code><br><br>
-        
-        <strong>🔧 Claude Desktop Setup:</strong><br>
-        Add to <code>claude_desktop_config.json</code>:<br>
-        <pre>{
-  "mcpServers": {
-    "ocm": {
-      "command": "npx",
-      "args": ["ocm-mcp"],
-      "env": {
-        "OCM_API_KEY": "your_api_key_here"
-      }
-    }
-  }
-}</pre><br>
-        
-        <strong>💻 VSCode/Cursor Setup:</strong><br>
-        Install MCP extension and add server config<br><br>
-        
-        <strong>🚀 Example Prompts:</strong><br>
-        • "Find EV charging stations in London"<br>
-        • "Show me fast charging stations within 50km of Paris"<br>
-        • "List charging stations in California with Tesla connectors"<br>
-        • "What charging options are near coordinates 40.7128, -74.0060?"<br><br>
-        
-        <strong>🛠️ Available Tools:</strong><br>
-        • <code>list_poi</code> - Search charging stations by location<br>
-        • <code>retrieve_referencedata</code> - Get countries, operators, etc.<br>
-        • <code>authenticate_profile</code> - User authentication<br>
-        • <code>submit_comment</code> - Submit station comments<br>
-        • <code>create_mediaitem</code> - Upload station photos<br>
-        • <code>retrieve_openapi</code> - Get API documentation<br><br>
-        
-        <strong>🔗 More Info:</strong><br>
-        <a href="https://github.com/andreibesleaga/ocm-sdk" target="_blank">GitHub Repository</a><br>
-        <a href="https://www.npmjs.com/package/ocm-mcp" target="_blank">NPM Package</a>
-    `;
-    resultDiv.className = 'result info';
+    const body = setResult('info', 'Installation guide', 'ocm-mcp');
+
+    const guide = el('div', 'guide');
+    guide.innerHTML = [
+        '<h3>Install</h3>',
+        '<p><code>npm install -g ocm-mcp</code></p>',
+        '<h3>Claude Desktop setup</h3>',
+        '<p>Add this to <code>claude_desktop_config.json</code>:</p>',
+        '<pre>{\n  "mcpServers": {\n    "ocm": {\n      "command": "npx",\n      "args": ["ocm-mcp"],\n      "env": {\n        "OCM_API_KEY": "your_api_key_here"\n      }\n    }\n  }\n}</pre>',
+        '<h3>VS Code / Cursor</h3>',
+        '<p>Install an MCP extension and add the same server configuration.</p>',
+        '<h3>Example prompts</h3>',
+        '<ul>',
+        '<li>Find EV charging stations in London</li>',
+        '<li>Show me fast charging stations within 50 km of Paris</li>',
+        '<li>List charging stations in California with Tesla connectors</li>',
+        '<li>What charging options are near 40.7128, -74.0060?</li>',
+        '</ul>',
+        '<h3>Available tools</h3>',
+        '<ul>',
+        '<li><code>list_poi</code> — search charging stations by location</li>',
+        '<li><code>retrieve_referencedata</code> — countries, operators and other reference data</li>',
+        '<li><code>authenticate_profile</code> — user authentication</li>',
+        '<li><code>submit_comment</code> — submit station comments</li>',
+        '<li><code>create_mediaitem</code> — upload station photos</li>',
+        '<li><code>retrieve_openapi</code> — get the API documentation</li>',
+        '</ul>',
+        '<h3>More</h3>',
+        '<ul>',
+        '<li><a href="https://github.com/andreibesleaga/ocm-sdk" target="_blank" rel="noopener">GitHub repository</a></li>',
+        '<li><a href="https://www.npmjs.com/package/ocm-mcp" target="_blank" rel="noopener">npm package</a></li>',
+        '</ul>'
+    ].join('');
+
+    body.appendChild(guide);
 }
 
-document.getElementById('command').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter' && e.ctrlKey) {
+/* -------------------------------------------------------------------- wiring */
+
+map.on('click', (event) => {
+    const { lat, lng } = event.latlng;
+    /* Leaflet keeps the numbers; only the visible text is rounded. */
+    const latText = lat.toFixed(4);
+    const lngText = lng.toFixed(4);
+
+    if (selectedMarker) map.removeLayer(selectedMarker);
+
+    selectedMarker = L.marker([lat, lng], {
+        icon: pinIcon('pin--selected'),
+        title: 'Selected location'
+    })
+        .addTo(map)
+        .bindPopup('Selected: ' + latText + ', ' + lngText + '<br>Press “Search here” to find stations');
+
+    commandInput.value = 'Search coordinates ' + latText + ', ' + lngText;
+});
+
+sendButton.addEventListener('click', sendCommand);
+document.getElementById('search-here').addEventListener('click', searchHere);
+document.getElementById('list-tools').addEventListener('click', listTools);
+document.getElementById('install-guide').addEventListener('click', showInstallGuide);
+
+document.querySelectorAll('.chip').forEach((chip) => {
+    chip.addEventListener('click', () => {
+        commandInput.value = chip.dataset.command;
+        commandInput.focus();
+    });
+});
+
+commandInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+        event.preventDefault();
         sendCommand();
     }
 });
+
+/* Bottom sheet on small screens. */
+(function () {
+    const app = document.getElementById('app');
+    const dock = document.getElementById('dock');
+    const handle = document.getElementById('sheet-handle');
+    const label = document.getElementById('sheet-handle-label');
+    if (!handle) return;
+
+    const small = window.matchMedia('(max-width: 768px)');
+
+    function setCollapsed(collapsed) {
+        app.classList.toggle('is-collapsed', collapsed);
+        handle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        label.textContent = collapsed ? 'More' : 'Less';
+    }
+
+    /* Keep the map's own controls clear of the sheet. */
+    function measure() {
+        app.style.setProperty('--sheet-h', small.matches ? dock.offsetHeight + 'px' : '0px');
+    }
+
+    if (window.ResizeObserver) new ResizeObserver(measure).observe(dock);
+    window.addEventListener('resize', measure);
+    if (small.addEventListener) small.addEventListener('change', measure);
+
+    handle.addEventListener('click', () => {
+        setCollapsed(!app.classList.contains('is-collapsed'));
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && small.matches && !app.classList.contains('is-collapsed')) {
+            setCollapsed(true);
+            handle.focus();
+        }
+    });
+
+    /* Phones open with the map in view; the sheet expands on demand or on a result. */
+    setCollapsed(small.matches);
+    measure();
+
+    /* A fresh result is worth showing straight away. */
+    const observer = new MutationObserver(() => {
+        if (small.matches && app.classList.contains('is-collapsed') && resultEl.classList.contains('success')) {
+            setCollapsed(false);
+        }
+    });
+    observer.observe(resultEl, { attributes: true, attributeFilter: ['class'] });
+})();
