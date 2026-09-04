@@ -1,4 +1,4 @@
-# OCM MCP Demo - Electric Vehicles Chargers Finder
+# OCM MCP Demo - Electric Vehicles Charger Stations Finder
 
 > [!WARNING]
 > Proof-of-concept / demo — not intended for production use.
