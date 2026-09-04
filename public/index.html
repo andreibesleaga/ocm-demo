@@ -9,7 +9,8 @@
     <meta name="theme-color" content="#eef2f6">
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230e9f8f'/%3E%3Cpath d='M17 5 8 19h7l-1 8 9-14h-7l1-8z' fill='%23fff'/%3E%3C/svg%3E">
     <link rel="preload" href="fonts/ibm-plex-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous" />
     <link rel="stylesheet" href="styles.css">
     <script>
         /* Apply the stored or preferred theme before first paint (no flash). */
@@ -20,6 +21,8 @@
                     ? stored
                     : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
                 document.documentElement.setAttribute('data-theme', theme);
+                var meta = document.querySelector('meta[name="theme-color"]');
+                if (meta) meta.setAttribute('content', theme === 'dark' ? '#0b1220' : '#eef2f6');
             } catch (e) {
                 /* Storage unavailable (private mode, blocked cookies): keep the default. */
             }
@@ -110,7 +113,8 @@
         <p style="padding:16px">This demo needs JavaScript to talk to the MCP server and draw the map.</p>
     </noscript>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
     <script src="theme.js"></script>
     <script src="app.js"></script>
 </body>

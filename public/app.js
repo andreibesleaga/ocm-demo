@@ -299,8 +299,10 @@ function showInstallGuide() {
 /* -------------------------------------------------------------------- wiring */
 
 map.on('click', (event) => {
-    const lat = event.latlng.lat.toFixed(4);
-    const lng = event.latlng.lng.toFixed(4);
+    const { lat, lng } = event.latlng;
+    /* Leaflet keeps the numbers; only the visible text is rounded. */
+    const latText = lat.toFixed(4);
+    const lngText = lng.toFixed(4);
 
     if (selectedMarker) map.removeLayer(selectedMarker);
 
@@ -309,9 +311,9 @@ map.on('click', (event) => {
         title: 'Selected location'
     })
         .addTo(map)
-        .bindPopup('Selected: ' + lat + ', ' + lng + '<br>Press “Search here” to find stations');
+        .bindPopup('Selected: ' + latText + ', ' + lngText + '<br>Press “Search here” to find stations');
 
-    commandInput.value = 'Search coordinates ' + lat + ', ' + lng;
+    commandInput.value = 'Search coordinates ' + latText + ', ' + lngText;
 });
 
 sendButton.addEventListener('click', sendCommand);
