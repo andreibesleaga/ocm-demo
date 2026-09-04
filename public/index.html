@@ -1,45 +1,117 @@
 <!DOCTYPE html>
-<html>
+<html lang="en" data-theme="light">
 <head>
-    <title>OCM MCP Demo</title>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>OCM MCP Demo — find EV charging stations over the Model Context Protocol</title>
+    <meta name="description" content="Interactive demo of the ocm-mcp server: ask for EV charging stations in plain language and see them on a map, over the real Model Context Protocol.">
+    <meta name="color-scheme" content="light dark">
+    <meta name="theme-color" content="#eef2f6">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230e9f8f'/%3E%3Cpath d='M17 5 8 19h7l-1 8 9-14h-7l1-8z' fill='%23fff'/%3E%3C/svg%3E">
+    <link rel="preload" href="fonts/ibm-plex-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <style>
-        body { margin: 0; font-family: Arial, sans-serif; }
-        .container { display: flex; height: 100vh; }
-        #map { flex: 1; }
-        .sidebar { width: 300px; padding: 20px; background: #f5f5f5; overflow-y: auto; }
-        .input-group { margin-bottom: 15px; }
-        textarea { width: 100%; height: 100px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
-        button { width: 100%; padding: 10px; background: #007cba; color: white; border: none; border-radius: 4px; cursor: pointer; margin-bottom: 5px; }
-        button:hover { background: #005a87; }
-        .result { margin-top: 15px; padding: 10px; background: white; border-radius: 4px; font-size: 12px; max-height: 300px; overflow-y: auto; }
-        .result pre { background: #f0f0f0; padding: 8px; border-radius: 3px; font-size: 11px; overflow-x: auto; }
-        .result code { background: #f0f0f0; padding: 2px 4px; border-radius: 3px; font-size: 11px; }
-        .error { background: #ffe6e6; color: #d00; }
-        .success { background: #e6ffe6; color: #060; }
-        .info { background: #e6f3ff; color: #0066cc; }
-    </style>
+    <link rel="stylesheet" href="styles.css">
+    <script>
+        /* Apply the stored or preferred theme before first paint (no flash). */
+        (function () {
+            try {
+                var stored = localStorage.getItem('theme');
+                var theme = (stored === 'light' || stored === 'dark')
+                    ? stored
+                    : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                document.documentElement.setAttribute('data-theme', theme);
+            } catch (e) {
+                /* Storage unavailable (private mode, blocked cookies): keep the default. */
+            }
+        })();
+    </script>
 </head>
 <body>
-    <div class="container">
-        <div id="map"></div>
-        <div class="sidebar">
-            <h3>OCM MCP Demo</h3>
-            <p>Real MCP protocol with <strong>ocm-mcp</strong> server</p>
-            <div class="input-group">
-                <textarea id="command" placeholder="Try: charging GB, stations US, Find charging stations in London, GB, or click map to select pinpoint area and click 'Search Here', or get tools. Independent MCP usage on 'Installation Guide'"></textarea>
-                <button onclick="sendCommand()">Send MCP Command</button>
-                <button onclick="searchHere()">Search Here</button>
-                <button onclick="listTools()">List MCP Tools</button>
-                <button onclick="showInstallGuide()">Installation Guide</button>
+    <a class="skip-link" href="#command">Skip to the command box</a>
+
+    <div class="app" id="app">
+        <div id="map" role="region" aria-label="Map of charging stations. Click the map to pick a location."></div>
+
+        <header class="brand glass">
+            <span class="mark" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"></path></svg>
+            </span>
+            <div class="brand__text">
+                <h1>OCM MCP Demo</h1>
+                <p>Real MCP protocol with the <strong>ocm-mcp</strong> server</p>
             </div>
-            <div id="result" class="result info">Using real MCP protocol with ocm-mcp server. Enter a command to get started.</div>
-        </div>
+        </header>
+
+        <nav class="utils" aria-label="Site">
+            <a class="link-btn" href="https://github.com/andreibesleaga/ocm-demo" target="_blank" rel="noopener">GitHub</a>
+            <button type="button" class="theme-toggle" id="theme-toggle" role="switch" aria-checked="false">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg>
+                <span class="theme-toggle__track" aria-hidden="true"></span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path></svg>
+                <span class="sr-only">Dark theme</span>
+            </button>
+        </nav>
+
+        <main class="dock" id="dock">
+            <button type="button" class="sheet-handle" id="sheet-handle" aria-expanded="true" aria-controls="dock">
+                <span class="sheet-handle__label" id="sheet-handle-label">Hide results</span>
+            </button>
+
+            <section class="composer glass" aria-labelledby="composer-heading">
+                <h2 class="sr-only" id="composer-heading">MCP command</h2>
+                <label class="field-label" for="command">Command</label>
+                <textarea id="command" rows="4" placeholder="Try: charging GB · Find charging stations in London, GB · or click the map and press Search here"></textarea>
+
+                <div class="chips" role="group" aria-label="Example commands">
+                    <button type="button" class="chip" data-command="charging GB">charging GB</button>
+                    <button type="button" class="chip" data-command="stations US">stations US</button>
+                    <button type="button" class="chip" data-command="Find charging stations in Paris">Find charging stations in Paris</button>
+                    <button type="button" class="chip" data-command="list tools">list tools</button>
+                </div>
+
+                <button type="button" class="btn btn--primary" id="send">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"></path></svg>
+                    Send MCP command
+                </button>
+
+                <div class="grid-2">
+                    <button type="button" class="btn" id="search-here">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                        Search here
+                    </button>
+                    <button type="button" class="btn" id="list-tools">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h10M4 18h7"></path></svg>
+                        List MCP tools
+                    </button>
+                </div>
+
+                <button type="button" class="btn" id="install-guide">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"></path></svg>
+                    Installation guide
+                </button>
+
+                <p class="hint"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> sends · click the map to pick a point</p>
+            </section>
+
+            <section class="result info glass" id="result" role="status" aria-live="polite" aria-labelledby="result-heading">
+                <h2 class="sr-only" id="result-heading">Result</h2>
+                <div class="result__head">
+                    <span class="status">Ready</span>
+                    <span class="result__meta" id="result-meta"></span>
+                </div>
+                <div class="result__body" id="result-body">
+                    <p>Using the real MCP protocol with the <strong>ocm-mcp</strong> server. Enter a command to get started.</p>
+                </div>
+            </section>
+        </main>
     </div>
 
+    <noscript>
+        <p style="padding:16px">This demo needs JavaScript to talk to the MCP server and draw the map.</p>
+    </noscript>
+
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="theme.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

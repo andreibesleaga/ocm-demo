@@ -1,0 +1,1145 @@
+/* ==========================================================================
+   OCM MCP Demo — "Electric Glass"
+   Frontend-only stylesheet. Design tokens, light/dark themes, responsive
+   layout, Leaflet theming and accessibility affordances.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. Fonts (self-hosted; no font CDN at runtime)
+   -------------------------------------------------------------------------- */
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('fonts/space-grotesk-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('fonts/space-grotesk-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 400 600;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url('fonts/ibm-plex-sans-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 400 600;
+  font-stretch: 100%;
+  font-display: swap;
+  src: url('fonts/ibm-plex-sans-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* --------------------------------------------------------------------------
+   2. Design tokens
+   Light is the base; dark overrides under [data-theme="dark"] and, when the
+   user has expressed no preference, under prefers-color-scheme: dark.
+   Panel surfaces are deliberately high-alpha (.9) so text contrast stays
+   within AA no matter which map tile sits behind the glass.
+   -------------------------------------------------------------------------- */
+:root {
+  color-scheme: light;
+
+  --bg: #eef2f6;
+  --fg: #0f172a;
+  --fg-2: #475569;
+  --surface: rgba(255, 255, 255, 0.9);
+  --surface-2: #ffffff;
+  --surface-3: #f1f5f9;
+  --line: rgba(15, 23, 42, 0.12);
+  --line-strong: rgba(15, 23, 42, 0.24);
+
+  --accent: #0e9f8f;          /* decorative: icons, pins, focus, borders */
+  --accent-text: #0b7d71;     /* accent used as text or button background */
+  --accent-ink: #ffffff;      /* text on an --accent-text background */
+  --accent-bg: rgba(14, 159, 143, 0.12);
+  --lime: #b4e33d;
+
+  --ok: #15803d;
+  --ok-bg: #dcfce7;
+  --danger: #b91c1c;
+  --danger-bg: #fee2e2;
+
+  --shadow: 0 20px 50px rgba(15, 23, 42, 0.14), 0 1px 0 rgba(255, 255, 255, 0.6) inset;
+  --shadow-sm: 0 6px 16px rgba(15, 23, 42, 0.1);
+
+  --font-body: 'IBM Plex Sans', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  --font-display: 'Space Grotesk', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+
+  --radius: 20px;
+  --radius-sm: 12px;
+  --dock-width: 400px;
+  --gap: 14px;
+  --edge: 24px;
+
+  --map-filter: none;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: #0b1220;
+  --fg: #e6edf5;
+  --fg-2: #a2b0c2;
+  --surface: rgba(17, 26, 42, 0.9);
+  --surface-2: #111a2a;
+  --surface-3: #162134;
+  --line: rgba(230, 237, 245, 0.14);
+  --line-strong: rgba(230, 237, 245, 0.3);
+
+  --accent: #2dd4bf;
+  --accent-text: #2dd4bf;
+  --accent-ink: #04211d;
+  --accent-bg: rgba(45, 212, 191, 0.14);
+  --lime: #c7f24a;
+
+  --ok: #4ade80;
+  --ok-bg: rgba(74, 222, 128, 0.14);
+  --danger: #fca5a5;
+  --danger-bg: rgba(248, 113, 113, 0.14);
+
+  --shadow: 0 24px 60px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+  --shadow-sm: 0 6px 16px rgba(0, 0, 0, 0.45);
+
+  --map-filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.92) saturate(0.7);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+
+    --bg: #0b1220;
+    --fg: #e6edf5;
+    --fg-2: #a2b0c2;
+    --surface: rgba(17, 26, 42, 0.9);
+    --surface-2: #111a2a;
+    --surface-3: #162134;
+    --line: rgba(230, 237, 245, 0.14);
+    --line-strong: rgba(230, 237, 245, 0.3);
+
+    --accent: #2dd4bf;
+    --accent-text: #2dd4bf;
+    --accent-ink: #04211d;
+    --accent-bg: rgba(45, 212, 191, 0.14);
+    --lime: #c7f24a;
+
+    --ok: #4ade80;
+    --ok-bg: rgba(74, 222, 128, 0.14);
+    --danger: #fca5a5;
+    --danger-bg: rgba(248, 113, 113, 0.14);
+
+    --shadow: 0 24px 60px rgba(0, 0, 0, 0.5), 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+    --shadow-sm: 0 6px 16px rgba(0, 0, 0, 0.45);
+
+    --map-filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.92) saturate(0.7);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   3. Base
+   -------------------------------------------------------------------------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+a {
+  color: var(--accent-text);
+}
+
+a:hover {
+  color: var(--fg);
+}
+
+:where(a, button, input, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 1200;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--fg);
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-200%);
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+/* --------------------------------------------------------------------------
+   4. Layout — map fills the viewport, panels float above it
+   -------------------------------------------------------------------------- */
+.app {
+  display: grid;
+  grid-template-columns: var(--dock-width) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100vh;
+  height: 100dvh;
+  padding: var(--edge);
+  padding-top: max(var(--edge), env(safe-area-inset-top));
+  padding-bottom: max(var(--edge), env(safe-area-inset-bottom));
+  padding-left: max(var(--edge), env(safe-area-inset-left));
+  padding-right: max(var(--edge), env(safe-area-inset-right));
+  gap: var(--gap);
+}
+
+#map {
+  grid-column: 1 / -1;
+  grid-row: 1 / -1;
+  margin: calc(-1 * var(--edge));
+  margin-top: calc(-1 * max(var(--edge), env(safe-area-inset-top)));
+  margin-bottom: calc(-1 * max(var(--edge), env(safe-area-inset-bottom)));
+  background: var(--bg);
+  z-index: 0;
+}
+
+.brand {
+  grid-column: 1;
+  grid-row: 1;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+}
+
+.utils {
+  grid-column: 2;
+  grid-row: 1;
+  z-index: 3;
+  justify-self: end;
+  align-self: start;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dock {
+  grid-column: 1;
+  grid-row: 2;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-height: 0;
+}
+
+/* --------------------------------------------------------------------------
+   5. Glass panels
+   -------------------------------------------------------------------------- */
+.glass {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass {
+    background: var(--surface-2);
+  }
+}
+
+.mark {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-sm);
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--accent-text), var(--lime));
+  color: var(--accent-ink);
+}
+
+:root[data-theme='dark'] .mark {
+  color: #04211d;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .mark {
+    color: #04211d;
+  }
+}
+
+.brand__text {
+  min-width: 0;
+}
+
+.brand h1 {
+  font-size: 1.125rem;
+  line-height: 1.2;
+}
+
+.brand p {
+  margin: 2px 0 0;
+  color: var(--fg-2);
+  font-size: 0.8125rem;
+}
+
+/* --------------------------------------------------------------------------
+   6. Controls
+   -------------------------------------------------------------------------- */
+.composer {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: none;
+}
+
+.field-label {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+#command {
+  width: 100%;
+  min-height: 104px;
+  padding: 12px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--fg);
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+#command::placeholder {
+  color: var(--fg-2);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  min-height: 34px;
+  padding: 4px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--fg-2);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.chip:hover {
+  color: var(--fg);
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.btn {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--fg);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: transform 0.12s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.btn:hover {
+  border-color: var(--accent);
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn--primary {
+  background: var(--accent-text);
+  color: var(--accent-ink);
+  border-color: transparent;
+}
+
+.btn--primary:hover {
+  background: var(--accent);
+  border-color: transparent;
+}
+
+.btn[disabled] {
+  opacity: 0.55;
+  cursor: progress;
+  transform: none;
+}
+
+.btn svg,
+.chip svg {
+  flex: none;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.hint {
+  margin: 0;
+  color: var(--fg-2);
+  font-size: 0.75rem;
+}
+
+kbd {
+  font-family: inherit;
+  font-size: 0.6875rem;
+  border: 1px solid var(--line-strong);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+/* --------------------------------------------------------------------------
+   7. Result panel
+   -------------------------------------------------------------------------- */
+.result {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  flex: 1;
+}
+
+.result__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.result__meta {
+  color: var(--fg-2);
+  font-size: 0.8125rem;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: var(--accent-bg);
+  color: var(--accent-text);
+}
+
+.status::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.result.success .status {
+  background: var(--ok-bg);
+  color: var(--ok);
+}
+
+.result.error .status {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.result p {
+  margin: 0;
+}
+
+.result[aria-busy='true'] .result__body {
+  opacity: 0.6;
+}
+
+.stations {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.station {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.station:hover {
+  border-color: var(--accent);
+  background: var(--surface-3);
+}
+
+.station__name {
+  display: block;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.station__meta {
+  display: block;
+  color: var(--fg-2);
+  font-size: 0.8125rem;
+}
+
+.station__power {
+  flex: none;
+  white-space: nowrap;
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--accent-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.tools {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tools li {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-size: 0.875rem;
+}
+
+.tools code,
+.guide code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8125em;
+  background: var(--surface-3);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.guide {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 0.875rem;
+}
+
+.guide h3 {
+  font-size: 0.9375rem;
+}
+
+.guide ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.guide pre {
+  margin: 0;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-3);
+  border: 1px solid var(--line);
+  overflow-x: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--line-strong);
+  border-top-color: var(--accent-text);
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+  vertical-align: -3px;
+  margin-right: 8px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   8. Theme switch
+   -------------------------------------------------------------------------- */
+.theme-toggle {
+  min-height: 40px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--fg-2);
+  cursor: pointer;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.theme-toggle:hover {
+  color: var(--fg);
+}
+
+.theme-toggle__track {
+  position: relative;
+  width: 26px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--accent-text);
+}
+
+.theme-toggle__track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent-ink);
+  transition: transform 0.18s ease;
+}
+
+.theme-toggle[aria-checked='true'] .theme-toggle__track::after {
+  transform: translateX(12px);
+}
+
+.link-btn {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--fg);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: none;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.link-btn:hover {
+  color: var(--accent-text);
+  border-color: var(--accent);
+}
+
+/* --------------------------------------------------------------------------
+   9. Leaflet theming
+   -------------------------------------------------------------------------- */
+.leaflet-container {
+  background: var(--bg);
+  font-family: var(--font-body);
+}
+
+.leaflet-tile-pane {
+  filter: var(--map-filter);
+}
+
+.leaflet-bar a,
+.leaflet-bar a:hover {
+  background: var(--surface-2);
+  color: var(--fg);
+  border-bottom-color: var(--line);
+  width: 34px;
+  height: 34px;
+  line-height: 34px;
+}
+
+.leaflet-bar a:hover {
+  color: var(--accent-text);
+}
+
+.leaflet-bar {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.leaflet-control-attribution {
+  background: var(--surface) !important;
+  color: var(--fg-2);
+  border-radius: 6px 0 0 0;
+  font-size: 11px;
+  padding: 2px 8px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.leaflet-control-attribution a {
+  color: var(--accent-text);
+}
+
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: var(--surface-2);
+  color: var(--fg);
+  box-shadow: var(--shadow);
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+}
+
+.leaflet-popup-content {
+  margin: 12px 14px;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.leaflet-popup-content b {
+  font-family: var(--font-display);
+  font-size: 0.875rem;
+}
+
+.leaflet-popup-close-button {
+  color: var(--fg-2) !important;
+  width: 28px !important;
+  height: 28px !important;
+  font-size: 20px !important;
+  line-height: 26px !important;
+}
+
+/* CSS map pins (replace remote marker images) */
+.pin {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 3px solid var(--surface-2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.pin--selected {
+  width: 24px;
+  height: 24px;
+  background: var(--lime);
+}
+
+/* --------------------------------------------------------------------------
+   10. Mobile sheet handle (hidden on desktop)
+   -------------------------------------------------------------------------- */
+.sheet-handle {
+  display: none;
+}
+
+/* --------------------------------------------------------------------------
+   11. Responsive
+   -------------------------------------------------------------------------- */
+@media (max-width: 1180px) {
+  :root {
+    --dock-width: 340px;
+    --edge: 16px;
+  }
+}
+
+@media (max-width: 860px) and (min-width: 769px) {
+  :root {
+    --dock-width: 300px;
+  }
+
+  .brand p {
+    display: none;
+  }
+}
+
+/* Phones and small tablets: brand bar on top, controls in a bottom sheet. */
+@media (max-width: 768px) {
+  :root {
+    --edge: 12px;
+    --gap: 10px;
+    --radius: 18px;
+  }
+
+  .app {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .brand {
+    grid-column: 1;
+    grid-row: 1;
+    padding-right: 108px;
+  }
+
+  .utils {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: center;
+    padding-right: 8px;
+  }
+
+  .utils .link-btn {
+    display: none;
+  }
+
+  .dock {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 4;
+    gap: 0;
+    max-height: 80dvh;
+    padding-bottom: env(safe-area-inset-bottom);
+    border-radius: var(--radius) var(--radius) 0 0;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-bottom: 0;
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(18px) saturate(1.4);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    transition: transform 0.22s ease;
+  }
+
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .dock {
+      background: var(--surface-2);
+    }
+  }
+
+  /* Inner panels lose their own chrome inside the sheet. */
+  .dock .glass {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .sheet-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 40px;
+    padding: 10px 16px 4px;
+    border: 0;
+    background: transparent;
+    color: var(--fg-2);
+    font: inherit;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .sheet-handle::before {
+    content: '';
+    width: 40px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--line-strong);
+  }
+
+  .sheet-handle__label {
+    position: absolute;
+    right: 20px;
+  }
+
+  .composer {
+    padding: 10px 16px 16px;
+  }
+
+  .result {
+    padding: 0 16px 16px;
+    max-height: 44dvh;
+  }
+
+  /* Collapsed sheet: just enough to type a command and send it. */
+  .app.is-collapsed .result,
+  .app.is-collapsed .chips,
+  .app.is-collapsed .grid-2,
+  .app.is-collapsed #install-guide,
+  .app.is-collapsed .hint {
+    display: none;
+  }
+
+  #command {
+    min-height: 76px;
+  }
+
+  .app.is-collapsed #command {
+    height: 58px;
+    min-height: 58px;
+  }
+
+  /* Keep the map's own controls clear of the sheet. */
+  .leaflet-bottom {
+    bottom: calc(var(--sheet-h, 0px) + 4px);
+  }
+}
+
+@media (max-width: 480px) {
+  body {
+    font-size: 14px;
+  }
+
+  .brand h1 {
+    font-size: 1rem;
+  }
+
+  .brand p {
+    font-size: 0.75rem;
+  }
+
+  .mark {
+    width: 32px;
+    height: 32px;
+  }
+
+  .grid-2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Landscape phones: put the dock back into a side column. */
+@media (max-width: 900px) and (max-height: 520px) and (orientation: landscape) {
+  .app {
+    grid-template-columns: 46% minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .brand {
+    grid-column: 1;
+    grid-row: 1;
+    padding-right: 18px;
+  }
+
+  .utils {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+    align-self: start;
+  }
+
+  .dock {
+    position: static;
+    grid-column: 1;
+    grid-row: 2;
+    max-height: none;
+    gap: var(--gap);
+    background: none;
+    border: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .dock .glass {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(18px) saturate(1.4);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  }
+
+  .sheet-handle {
+    display: none;
+  }
+
+  .result {
+    max-height: none;
+  }
+
+  .app.is-collapsed .result,
+  .app.is-collapsed .chips {
+    display: flex;
+  }
+
+  .leaflet-bottom {
+    bottom: 0;
+  }
+}
+
+/* Touch input gets comfortable targets everywhere. */
+@media (pointer: coarse) {
+  .chip {
+    min-height: 44px;
+    padding: 0 14px;
+  }
+
+  .theme-toggle,
+  .link-btn {
+    min-height: 44px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   12. User preferences
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --line: rgba(15, 23, 42, 0.45);
+    --line-strong: rgba(15, 23, 42, 0.7);
+    --fg-2: #33415c;
+    --surface: #ffffff;
+  }
+
+  :root[data-theme='dark'] {
+    --line: rgba(230, 237, 245, 0.45);
+    --line-strong: rgba(230, 237, 245, 0.75);
+    --fg-2: #cbd5e1;
+    --surface: #0d1626;
+  }
+
+  .glass,
+  .dock {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+@media print {
+  body {
+    overflow: visible;
+    background: #fff;
+    color: #000;
+  }
+
+  .app {
+    display: block;
+    height: auto;
+    padding: 0;
+  }
+
+  #map,
+  .utils,
+  .chips,
+  .btn,
+  .sheet-handle {
+    display: none !important;
+  }
+
+  .glass,
+  .dock {
+    background: none;
+    border: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .result {
+    overflow: visible;
+    max-height: none;
+  }
+}
