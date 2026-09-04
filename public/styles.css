@@ -336,8 +336,17 @@ a:hover {
 
 .brand p {
   margin: 2px 0 0;
-  color: var(--fg-2);
   font-size: 0.8125rem;
+}
+
+.brand__tagline {
+  color: var(--fg);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+.brand__note {
+  color: var(--fg-2);
 }
 
 /* --------------------------------------------------------------------------
@@ -843,7 +852,7 @@ kbd {
     --dock-width: 300px;
   }
 
-  .brand p {
+  .brand__note {
     display: none;
   }
 }
@@ -987,6 +996,10 @@ kbd {
 
   .brand p {
     font-size: 0.75rem;
+  }
+
+  .brand__note {
+    display: none;
   }
 
   .mark {
