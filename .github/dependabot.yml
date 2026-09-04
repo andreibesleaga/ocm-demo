@@ -1,14 +1,18 @@
 version: 2
+
+# Routine version bumps are switched off so the deployed demo keeps running on
+# the exact versions in package-lock.json. Dependabot SECURITY updates are a
+# separate feature and still open pull requests, so genuine advisories are the
+# only thing that asks for attention here.
 updates:
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: weekly
-    open-pull-requests-limit: 10
-    groups:
-      all-dependencies:
-        patterns: ["*"]
+    open-pull-requests-limit: 0
+
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    open-pull-requests-limit: 0
