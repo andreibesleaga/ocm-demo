@@ -187,10 +187,10 @@
   /* Attach the first reachable provider. Resolves with the provider that won, or
      null if every provider failed — the caller decides what to tell the visitor. */
   async function attach(map) {
-    const webgl = hasWebGL() && (await libsReady());
+    const vectorReady = hasWebGL() && (await libsReady());
     for (const provider of PROVIDERS) {
-      if (provider.kind === 'vector' && !webgl) continue;
-      if (provider.kind === 'raster' && webgl) continue;
+      if (provider.kind === 'vector' && !vectorReady) continue;
+      if (provider.kind === 'raster' && vectorReady) continue;
       if (provider.kind === 'vector') {
         if (!(await reachable(provider))) continue;
         try {

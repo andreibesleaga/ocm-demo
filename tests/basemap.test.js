@@ -24,11 +24,14 @@ const appSource = readFileSync(new URL('../public/app.js', import.meta.url), 'ut
 function loadBasemap({
   hasWebGL1 = false,
   hasWebGL2 = true,
+  maplibreAvailable = true,
   vectorEvents = [],
   fetchImpl = vi.fn(async () => ({
     ok: true,
     json: async () => ({ version: 8, sources: { demo: {} } })
-  }))
+  })),
+  setTimeoutImpl = setTimeout,
+  clearTimeoutImpl = clearTimeout,
 } = {}) {
   const listeners = new Map();
   const on = (type, handler) => {
@@ -69,7 +72,7 @@ function loadBasemap({
   };
   const vectorLayers = [];
   const L = {
-    maplibreGL: vi.fn(() => {
+    maplibreGL: maplibreAvailable ? vi.fn(() => {
       const behavior = vectorEvents[vectorLayers.length] || 'load';
       const glListeners = new Map();
       const glMap = {
@@ -96,7 +99,7 @@ function loadBasemap({
       };
       vectorLayers.push({ layer, glMap, behavior });
       return layer;
-    }),
+    }) : undefined,
     tileLayer: vi.fn(() => {
       const layer = {
         addTo: vi.fn(() => layer)
@@ -111,8 +114,8 @@ function loadBasemap({
     L,
     fetch: fetchImpl,
     AbortController: class { constructor() { this.signal = {}; } abort() {} },
-    setTimeout,
-    clearTimeout,
+    setTimeout: setTimeoutImpl,
+    clearTimeout: clearTimeoutImpl,
     console,
   });
 
@@ -166,6 +169,22 @@ describe('basemap resilience', () => {
     await expect(Basemap.attach(map)).resolves.toBeNull();
     expect(map.removeLayer).toHaveBeenCalledTimes(2);
     expect(L.tileLayer).not.toHaveBeenCalled();
+  });
+
+  it('falls back to raster if the MapLibre bridge never becomes ready', async () => {
+    const setTimeoutImpl = vi.fn((fn) => {
+      fn();
+      return 1;
+    });
+    const { Basemap, L, map, fetchImpl } = loadBasemap({
+      maplibreAvailable: false,
+      setTimeoutImpl,
+      clearTimeoutImpl: vi.fn(),
+    });
+    const provider = await Basemap.attach(map);
+    expect(provider.id).toBe('osm-raster');
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(L.tileLayer).toHaveBeenCalledTimes(1);
   });
 
   it('lets the Referer reach the OSM raster fallback when it is used', () => {
