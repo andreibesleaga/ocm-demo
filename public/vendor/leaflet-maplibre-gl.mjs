@@ -26,7 +26,8 @@ var MaplibreGL = L.Layer.extend({
 	onRemove: function(map) {
 		if (this._map._proxy && this._map.options.zoomAnimation) L.DomEvent.off(this._map._proxy, L.DomUtil.TRANSITION_END, this._transitionEnd, this);
 		var paneName = this.getPaneName();
-		map.getPane(paneName).removeChild(this._container);
+		var pane = map.getPane(paneName);
+		if (pane && this._container && this._container.parentNode === pane) pane.removeChild(this._container);
 		this._glMap.remove();
 		this._glMap = null;
 	},
