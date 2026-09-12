@@ -7,7 +7,15 @@ import MCPClient from './mcp-server.js';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(helmet({ contentSecurityPolicy: false })); // CSP off: demo loads Leaflet/tiles from CDNs
+// CSP off: the demo still depends on third-party map assets — Leaflet CSS from unpkg
+// and the selected basemap provider's remote style/tile URLs.
+// Referrer-Policy is set explicitly: helmet's default is `no-referrer`, which strips the
+// Referer header from tile requests. Tile providers that require it then refuse to serve —
+// that is what produced the "403r Access blocked" tiles. See public/basemap.js.
+app.use(helmet({
+  contentSecurityPolicy: false,
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+}));
 app.use(express.json());
 
 // Configurable rate limit; defaults are permissive enough not to affect normal demo use.
