@@ -119,14 +119,29 @@
     }).addTo(map);
 
     /* Follow the UI theme so the basemap does not glare in dark mode. */
-    global.addEventListener('themechange', function () {
+    let listening = true;
+    const themeHandler = function () {
       const style = provider.styles[currentTheme()];
       try {
         layer.getMaplibreMap().setStyle(style);
       } catch (e) {
         /* A style swap is cosmetic; a failure must not take the map down. */
       }
-    });
+    };
+    const detachThemeHandler = function () {
+      if (!listening) return;
+      listening = false;
+      if (typeof global.removeEventListener === 'function') {
+        global.removeEventListener('themechange', themeHandler);
+      }
+    };
+    const remove = typeof layer.remove === 'function' ? layer.remove.bind(layer) : null;
+    layer.remove = function () {
+      detachThemeHandler();
+      return remove ? remove() : layer;
+    };
+    layer._basemapCleanup = detachThemeHandler;
+    global.addEventListener('themechange', themeHandler);
     return layer;
   }
 
@@ -143,6 +158,9 @@
 
   function removeLayer(map, layer) {
     try {
+      if (layer && typeof layer._basemapCleanup === 'function') {
+        layer._basemapCleanup();
+      }
       if (map && typeof map.removeLayer === 'function') {
         map.removeLayer(layer);
       } else if (layer && typeof layer.remove === 'function') {

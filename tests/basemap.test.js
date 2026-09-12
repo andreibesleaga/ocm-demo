@@ -41,7 +41,7 @@ function loadBasemap({
   const off = (type, handler) => {
     listeners.set(type, (listeners.get(type) || []).filter((fn) => fn !== handler));
   };
-  const emit = (type, payload) => {
+  const dispatch = (type, payload) => {
     for (const handler of listeners.get(type) || []) handler(payload);
   };
 
@@ -119,7 +119,7 @@ function loadBasemap({
     console,
   });
 
-  return { Basemap: window.Basemap, L, map, fetchImpl, vectorLayers };
+  return { Basemap: window.Basemap, L, map, fetchImpl, vectorLayers, dispatch };
 }
 
 describe('basemap resilience', () => {
@@ -157,11 +157,14 @@ describe('basemap resilience', () => {
   });
 
   it('fails over to the next vector provider when the first one errors during load', async () => {
-    const { Basemap, L, map } = loadBasemap({ vectorEvents: ['error', 'load'] });
+    const { Basemap, L, map, vectorLayers, dispatch } = loadBasemap({ vectorEvents: ['error', 'load'] });
     const provider = await Basemap.attach(map);
     expect(provider.id).toBe('versatiles');
     expect(map.removeLayer).toHaveBeenCalledTimes(1);
     expect(L.tileLayer).not.toHaveBeenCalled();
+    dispatch('themechange');
+    expect(vectorLayers[0].glMap.setStyle).not.toHaveBeenCalled();
+    expect(vectorLayers[1].glMap.setStyle).toHaveBeenCalledTimes(1);
   });
 
   it('does not fall back to OSM raster when every vector provider fails on a WebGL2 browser', async () => {
