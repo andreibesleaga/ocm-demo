@@ -22,6 +22,7 @@
 
   const PROBE_TIMEOUT_MS = 6000;
   const LIBS_TIMEOUT_MS = 8000;
+  const VECTOR_LOAD_TIMEOUT_MS = 8000;
 
   const PROVIDERS = [
     {
@@ -78,8 +79,8 @@
     try {
       const canvas = document.createElement('canvas');
       return Boolean(
-        global.WebGLRenderingContext &&
-          (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))
+        global.WebGL2RenderingContext &&
+          (canvas.getContext('webgl2') || canvas.getContext('experimental-webgl2'))
       );
     } catch (e) {
       return false;
@@ -140,15 +141,63 @@
     return layer;
   }
 
+  function removeLayer(map, layer) {
+    try {
+      if (map && typeof map.removeLayer === 'function') {
+        map.removeLayer(layer);
+      } else if (layer && typeof layer.remove === 'function') {
+        layer.remove();
+      }
+    } catch (e) {
+      /* Best effort only: a failed provider must not prevent trying the next one. */
+    }
+  }
+
+  function waitForVectorLayer(map, layer) {
+    const glMap = layer && typeof layer.getMaplibreMap === 'function' ? layer.getMaplibreMap() : null;
+    if (!glMap || typeof glMap.on !== 'function') return Promise.resolve(layer);
+    if (typeof glMap.loaded === 'function' && glMap.loaded()) return Promise.resolve(layer);
+
+    return new Promise(function (resolve, reject) {
+      let settled = false;
+      const cleanup = function () {
+        clearTimeout(timer);
+        if (typeof glMap.off === 'function') {
+          glMap.off('load', onReady);
+          glMap.off('idle', onReady);
+          glMap.off('error', onError);
+        }
+      };
+      const settle = function (ok) {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        if (!ok) removeLayer(map, layer);
+        (ok ? resolve : reject)(layer);
+      };
+      const onReady = function () { settle(true); };
+      const onError = function () { settle(false); };
+      const timer = setTimeout(function () { settle(false); }, VECTOR_LOAD_TIMEOUT_MS);
+      glMap.on('load', onReady);
+      glMap.on('idle', onReady);
+      glMap.on('error', onError);
+    });
+  }
+
   /* Attach the first reachable provider. Resolves with the provider that won, or
      null if every provider failed — the caller decides what to tell the visitor. */
   async function attach(map) {
     const webgl = hasWebGL() && (await libsReady());
     for (const provider of PROVIDERS) {
       if (provider.kind === 'vector' && !webgl) continue;
+      if (provider.kind === 'raster' && webgl) continue;
       if (provider.kind === 'vector') {
         if (!(await reachable(provider))) continue;
-        addVector(map, provider);
+        try {
+          await waitForVectorLayer(map, addVector(map, provider));
+        } catch (e) {
+          continue;
+        }
         return provider;
       }
       addRaster(map, provider);
