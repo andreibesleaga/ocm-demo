@@ -3,10 +3,13 @@
 
 const map = L.map('map', { zoomControl: false }).setView([51.505, -0.09], 10);
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors',
-    maxZoom: 19
-}).addTo(map);
+/* The basemap provider is chosen at runtime with failover; see basemap.js for why
+   the OSMF volunteer tile servers are no longer the default. */
+Basemap.attach(map).then((provider) => {
+    if (!provider) {
+        console.warn('No basemap provider reachable; the map will render without a background.');
+    }
+});
 
 L.control.zoom({ position: 'bottomright' }).addTo(map);
 

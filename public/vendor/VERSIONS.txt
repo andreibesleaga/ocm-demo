@@ -1,0 +1,2 @@
+maplibre-gl                     6.9.0   BSD-3-Clause
+@maplibre/maplibre-gl-leaflet   0.1.4   ISC   (import specifiers rewritten, see above)
